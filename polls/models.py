@@ -14,6 +14,7 @@ class Type(models.Model):
     tid = models.CharField(max_length=20, primary_key=True)
     type = models.CharField(max_length=200)
     url = models.CharField(max_length=200, default="")
+    parent = models.CharField(max_length=200, default=1)
     def __str__(self):
         return self.tid
 
@@ -44,5 +45,6 @@ class Listing(models.Model):
     areaLand = models.CharField(max_length=200, default="")
     title = models.CharField(max_length=200, default="")
     description = models.CharField(max_length=500, default="")
+    image = models.CharField(max_length=500, default="")
     def __str__(self):
         return self.listId

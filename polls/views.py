@@ -15,26 +15,53 @@ from .models import Type, Purpose, Location, Listing, User
 # -------------- Pass data set to provided view without shortcut
 
 def listing(request):
+    
+    ######     PROPERTY TYPE CODE    #####
+
     typeObject = Type.objects.get(tid=request.GET.get("type", ""))
+    typeId = typeObject.tid
     typeUrl = typeObject.url
     typeTitle = typeObject.type
+    typeParent = typeObject.parent
+    
+    if typeParent == '0':
+        childTypes = []
+        counter = 0
+        childTypeObject = Type.objects.filter(parent=typeId)
+        while counter < len(childTypeObject):
+            childTypes.append(childTypeObject[counter].tid)
+            counter += 1
+    else:
+        childTypes = ""
+        childTypes = typeId
+
+    ##################################
 
     purposeObject = Purpose.objects.get(pid=request.GET.get("purpose", ""))
+    purposeId = purposeObject.pid
     purposeUrl = purposeObject.url
     purposeTitle = purposeObject.purpose
 
+    ######     LOCATION   CODE  ######
+
     locationObject = Location.objects.get(lid=request.GET.get("location", ""))
     locationId = locationObject.lid
-    locationTitle = locationObject.location
-    locationLevel = locationObject.level
     locationParent = locationObject.parent
+    
+    if locationParent == 0:
+        childLocations = []
+        counter = 0
+        childLocationObject = Location.objects.filter(parent=locationId)
+        while counter < len(childLocationObject):
+            childLocations.append(childLocationObject[counter].lid)
+            counter += 1
+    else:
+        childLocations = ""
+        childLocations = locationId
 
-    parentTitle = ""
-    if Location.objects.filter(lid=locationParent).exists():
-        locationParentObject = Location.objects.get(lid=locationParent)
-        parentTitle = locationParentObject.location
+    ########################     LOCATION   CODE   END  ######
 
-    combined_queryset = Listing.objects.filter(purpose=purposeObject.pid, type=typeObject.tid, location=locationId)
+    combined_queryset = Listing.objects.filter(purpose=purposeId, type_id__in=childTypes, location_id__in=childLocations)
     listingObject = combined_queryset.order_by('-listId')
 
     counter = 0
@@ -48,10 +75,15 @@ def listing(request):
         propertyObj[counter]['purposeDetail']['title'] = purposeTitle
         propertyObj[counter]['purposeDetail']['url'] = purposeUrl
         
+        typeObject1 = Type.objects.get(tid=listingObject[counter].type)
+        typeId1 = typeObject1.tid
+        typeTitle1 = typeObject1.type
+        typeUrl1 = typeObject1.url
+        
         propertyObj[counter]['typeDetail'] = {}
-        propertyObj[counter]['typeDetail']['id'] = typeObject.tid
-        propertyObj[counter]['typeDetail']['title'] = typeTitle
-        propertyObj[counter]['typeDetail']['url'] = typeUrl
+        propertyObj[counter]['typeDetail']['id'] = typeId1
+        propertyObj[counter]['typeDetail']['title'] = typeTitle1
+        propertyObj[counter]['typeDetail']['url'] = typeUrl1
 
         propertyObj[counter]['title'] = listingObject[counter].title
         propertyObj[counter]['description'] = listingObject[counter].description
@@ -64,10 +96,18 @@ def listing(request):
         propertyObj[counter]['userDetail']['email'] = userObject.email
         propertyObj[counter]['userDetail']['phone'] = userObject.phone
 
+        locationObject = Location.objects.get(lid=listingObject[counter].location)
+        locationId = locationObject.lid
+        locationTitle = locationObject.location
+        locationParent1 = locationObject.parent
+
+        parentLocationData = Location.objects.get(lid=locationParent1)
+        parentLocationTitle = parentLocationData.location
+
         propertyObj[counter]['locationdetail'] = {}
         propertyObj[counter]['locationdetail']['locId'] = locationId
         propertyObj[counter]['locationdetail']['locationTitle'] = locationTitle
-        propertyObj[counter]['locationdetail']['parentTitle'] = parentTitle
+        propertyObj[counter]['locationdetail']['parentTitle'] = parentLocationTitle
         
         propertyObj[counter]['imagedetail'] = {}
         propertyObj[counter]['imagedetail'][0] = listingObject[counter].image
@@ -79,6 +119,8 @@ def listing(request):
     context = {
         'listing' : propertyObj,
         'lising_count' : len(listingObject),
+        'type' : typeParent,
+        'child' : childTypes,
     }
     return JsonResponse(context)
 

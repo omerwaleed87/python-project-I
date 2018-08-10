@@ -8,6 +8,6 @@ urlpatterns = [
     path('location/', views.location, name='location'),
     path('type/', views.type, name='type'),
     path('purpose/', views.purpose, name='purpose'),
-    path('details/', views.details, name='details'),
+    path('popularProperties/', views.popularProperties, name='popularProperties'),
     # path('', views.index, name='index'),
 ]

@@ -61,7 +61,11 @@ def listing(request):
 
     ########################     LOCATION   CODE   END  ######
 
-    combined_queryset = Listing.objects.filter(purpose=purposeId, type_id__in=childTypes, location_id__in=childLocations)
+    if request.GET.get("selector", "") != "":
+        combined_queryset = Listing.objects.filter(purpose=purposeId, type_id__in=childTypes, location_id__in=childLocations, listId=request.GET.get("selector", ""))
+    else:
+        combined_queryset = Listing.objects.filter(purpose=purposeId, type_id__in=childTypes, location_id__in=childLocations)    
+    
     listingObject = combined_queryset.order_by('-listId')
 
     counter = 0
@@ -237,111 +241,40 @@ def purpose(request):
     }
     return JsonResponse(context)
     
-def details(request):
-    
-    ######     PROPERTY TYPE CODE    #####
+def popularProperties(request):
 
-    typeObject = Type.objects.get(tid=request.GET.get("type", ""))
-    typeId = typeObject.tid
-    typeUrl = typeObject.url
-    typeTitle = typeObject.type
-    typeParent = typeObject.parent
-    
-    if typeParent == '0':
-        childTypes = []
-        counter = 0
-        childTypeObject = Type.objects.filter(parent=typeId)
-        while counter < len(childTypeObject):
-            childTypes.append(childTypeObject[counter].tid)
-            counter += 1
-    else:
-        childTypes = ""
-        childTypes = typeId
-
-    ##################################
-
-    purposeObject = Purpose.objects.get(pid=request.GET.get("purpose", ""))
-    purposeId = purposeObject.pid
-    purposeUrl = purposeObject.url
-    purposeTitle = purposeObject.purpose
-
-    ######     LOCATION   CODE  ######
-
-    locationObject = Location.objects.get(lid=request.GET.get("location", ""))
-    locationId = locationObject.lid
-    locationParent = locationObject.parent
-    
-    if locationParent == 0:
-        childLocations = []
-        counter = 0
-        childLocationObject = Location.objects.filter(parent=locationId)
-        while counter < len(childLocationObject):
-            childLocations.append(childLocationObject[counter].lid)
-            counter += 1
-    else:
-        childLocations = ""
-        childLocations = locationId
-
-    ########################     LOCATION   CODE   END  ######
-
-    combined_queryset = Listing.objects.filter(purpose=purposeId, type_id__in=childTypes, location_id__in=childLocations, listId=request.GET.get("selector", ""))
-    listingObject = combined_queryset.order_by('-listId')
-
+    popularObj = {}
+    popularObj[0] = {}
     counter = 0
-    propertyObj = {}
+    saleCounter = -1
+    rentCounter = -1
+    popularObj[0]["sale"] = {}
+    popularObj[0]["rent"] = {}
+
+    combined_queryset = Listing.objects.select_related('location', 'type', 'purpose')
+    listingObject = combined_queryset.order_by('-listId')    
+
     while counter < len(listingObject):
-        propertyObj[counter] = {}
-        propertyObj[counter]['id'] = listingObject[counter].listId
-        
-        propertyObj[counter]['purposeDetail'] = {}
-        propertyObj[counter]['purposeDetail']['id'] = purposeObject.pid
-        propertyObj[counter]['purposeDetail']['title'] = purposeTitle
-        propertyObj[counter]['purposeDetail']['url'] = purposeUrl
-        
-        typeObject1 = Type.objects.get(tid=listingObject[counter].type)
-        typeId1 = typeObject1.tid
-        typeTitle1 = typeObject1.type
-        typeUrl1 = typeObject1.url
-        
-        propertyObj[counter]['typeDetail'] = {}
-        propertyObj[counter]['typeDetail']['id'] = typeId1
-        propertyObj[counter]['typeDetail']['title'] = typeTitle1
-        propertyObj[counter]['typeDetail']['url'] = typeUrl1
 
-        propertyObj[counter]['title'] = listingObject[counter].title
-        propertyObj[counter]['description'] = listingObject[counter].description
-        propertyObj[counter]['price'] = listingObject[counter].price
-        propertyObj[counter]['area'] = listingObject[counter].areaCovered
-        propertyObj[counter]['area'] = listingObject[counter].areaCovered
+        if listingObject[counter].purpose.pid == '1':
+            index = "sale"
+            saleCounter += 1
+            connector = saleCounter
+        else:
+            index = "rent"
+            rentCounter += 1
+            connector = rentCounter
 
-        propertyObj[counter]['userDetail'] = {}
-        userObject = User.objects.get(uid=listingObject[counter].user)
-        propertyObj[counter]['userDetail']['username'] = userObject.username
-        propertyObj[counter]['userDetail']['email'] = userObject.email
-        propertyObj[counter]['userDetail']['phone'] = userObject.phone
+        popularObj[0][index][connector] = {}
+        popularObj[0][index][connector]['id'] = listingObject[counter].listId
+        popularObj[0][index][connector]['title'] = listingObject[counter].type.type +" "+ listingObject[counter].purpose.purpose +" in "+ listingObject[counter].location.location
+        popularObj[0][index][connector]['url'] = "/"+ listingObject[counter].purpose.url +"/"+ listingObject[counter].type.url +"/"+ listingObject[counter].location.location_key +"/"
 
-        locationObject = Location.objects.get(lid=listingObject[counter].location)
-        locationId = locationObject.lid
-        locationTitle = locationObject.location
-        locationParent1 = locationObject.parent
-
-        parentLocationData = Location.objects.get(lid=locationParent1)
-        parentLocationTitle = parentLocationData.location
-
-        propertyObj[counter]['locationdetail'] = {}
-        propertyObj[counter]['locationdetail']['locId'] = locationId
-        propertyObj[counter]['locationdetail']['locationTitle'] = locationTitle
-        propertyObj[counter]['locationdetail']['parentTitle'] = parentLocationTitle
-        
-        propertyObj[counter]['imagedetail'] = {}
-        propertyObj[counter]['imagedetail'][0] = listingObject[counter].image
-
-        propertyObj[counter]['url'] = {}
-        propertyObj[counter]['url'][0] = "/"+ purposeUrl +"/"+ typeUrl1 +"/"+ locationObject.location_key +"/"+ listingObject[counter].title.replace(" ", "_") +"-"+listingObject[counter].listId 
-        counter = counter+1
+        counter += 1
 
     context = {
-        'details' : propertyObj,
+        'popular' : popularObj,
     }
     return JsonResponse(context)
+
 # Create your views here.

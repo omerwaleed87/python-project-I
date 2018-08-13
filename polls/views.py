@@ -120,9 +120,30 @@ def listing(request):
         propertyObj[counter]['url'][0] = "/"+ purposeUrl +"/"+ typeUrl1 +"/"+ locationObject.location_key +"/"+ listingObject[counter].title.replace(" ", "_") +"-"+listingObject[counter].listId 
         counter = counter+1
 
+    page = request.GET.get("page", "")
+    if page:
+        singlePageListingLimit = 4
+        minRange = (int(page) - 1) * singlePageListingLimit
+        maxRange = int(page) * singlePageListingLimit
+        filterIndex = 0
+        paginatePropertyObject = {}
+
+        while minRange < maxRange:
+            if minRange in propertyObj:
+                paginatePropertyObject[filterIndex] = {}
+                paginatePropertyObject[filterIndex] = propertyObj[minRange]
+                filterIndex += 1
+            minRange += 1
+    else:
+        paginatePropertyObject = {}
+        paginatePropertyObject = propertyObj
+
+    paginatePropertyObject['listing_count'] = len(listingObject)
     context = {
-        'listing' : propertyObj,
+        'listing' : paginatePropertyObject,
+        # 'newListing' : paginatePropertyObject,
         'lising_count' : len(listingObject),
+        # 'page' : page
     }
     return JsonResponse(context)
 
@@ -252,7 +273,7 @@ def popularProperties(request):
     popularObj[0]["rent"] = {}
 
     combined_queryset = Listing.objects.select_related('location', 'type', 'purpose')
-    listingObject = combined_queryset.order_by('-listId')    
+    listingObject = combined_queryset.order_by('-listId')
 
     while counter < len(listingObject):
 
